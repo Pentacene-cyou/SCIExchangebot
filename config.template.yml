@@ -1,0 +1,16 @@
+api_hash: 
+api_key: ''
+database:
+  from_port: 
+  password: 
+  server_host: 
+  username: 
+disabled_cmd: ''
+telegram:
+  TOKEN: 
+  admingroup: ''
+  uid: ''
+  workgroup: ''
+  workgroupname: ''
+  documentgroup: ''
+  name: ''

@@ -1,0 +1,7 @@
+pyyaml
+mysql-connector-python
+coloredlogs
+telethon
+distutils2-py3
+aiohttp
+bs4
