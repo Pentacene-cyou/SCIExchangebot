@@ -32,73 +32,36 @@ def log(chat_id: int, msg_id: int, user_id: int, doi: str, b_status: int = 0, do
         database.commit()
         return True
     except:
+        logger.error("DATABASE INSERT ERROR")
         return False
 
-def log_select_fr_doi(column: str, doi: str) -> list:
+def select(select_column: str, column: str, value: str|int) -> str|int:
     """ log selected from doi message with database """
     database = db_start()
     db_cursor = database.cursor()
-    db_cursor.execute(f'SELECT {column} FROM doi_doc where doi = "{doi}"')
-    data = db_cursor.fetchall()
-    try:
-        return int(data[0][0])
-    except:
-        return False
-
-def log_select_fr_msg_id(column: str, msg_id: int) -> int:
-    """ log selected from message id with database """
-    database = db_start()
-    db_cursor = database.cursor()
-    db_cursor.execute(f'SELECT {column} FROM doi_doc where msg_id = {msg_id}')
+    if isinstance(value, str):
+        db_cursor.execute(f'SELECT {select_column} FROM doi_doc where {column} = "{value}"')
+    elif isinstance(value, int):
+        db_cursor.execute(f'SELECT {select_column} FROM doi_doc where {column} = {value}')
+    else:
+        return 0
     data = db_cursor.fetchall()
     try:
         return int(data[0][0])
     except:
         return 0
 
-def log_select_fr_bot_msg_id(column: str, bot_msg_id: int) -> list:
-    """ log selected from bot message id with database """
-    database = db_start()
-    db_cursor = database.cursor()
-    db_cursor.execute(f'SELECT {column} FROM doi_doc where bot_msg_id = {bot_msg_id}')
-    data = db_cursor.fetchall()
-    try:
-        return int(data[0][0])
-    except:
-        return False
-
-def log_update(column: str, value: int, doi: str) -> bool:
+def update(column: str, value: str|int, select_column: str, select_value: str|int) -> bool:
     """ log update with database """
     database = db_start()
     db_cursor = database.cursor()
-    try:
-        db_cursor.execute(f'UPDATE doi_doc SET {column} = {value} Where doi = "{doi}"')
-        database.commit()
-        return True
-    except:
+    if isinstance(value, str):
+        db_cursor.execute(f'UPDATE doi_doc SET {column} = {value} where {select_column} = "{select_value}"')
+    elif isinstance(value, int):
+        db_cursor.execute(f'UPDATE doi_doc SET {column} = {value} where {select_column} = {select_value}')
+    else:
         return False
-
-def log_update_fr_msg_id(column: str, value: int, msg_id: int) -> bool:
-    """ log update from message id with database """
-    database = db_start()
-    db_cursor = database.cursor()
-    try:
-        db_cursor.execute(f'UPDATE doi_doc SET {column} = {value} Where msg_id = {msg_id}')
-        database.commit()
-        return True
-    except:
-        return False
-
-def log_update_fr_bot_msg_id(column: str, value: int, bot_msg_id: int) -> bool:
-    """ log update from bot message id with database """
-    database = db_start()
-    db_cursor = database.cursor()
-    try:
-        db_cursor.execute(f'UPDATE doi_doc SET {column} = {value} Where bot_msg_id = {bot_msg_id}')
-        database.commit()
-        return True
-    except:
-        return False
+    return True
 
 def is_in_blacklist(user_id: int) -> list:
     """ check if is in blacklist with database """

@@ -22,6 +22,10 @@ def is_doi(msg: str) -> bool:
     if doi:
         return True
     else:
+        msg = f'https://{msg}'
+        doi = re.findall(r'(?:https{,1}://doi.org/(10[.][0-9]{4,}(?:[.][0-9]+)*/(?:(?!["&\'<>])\S)+))', msg, flags=re.IGNORECASE)
+        if doi:
+            return True
         return False
 
 async def resolve_doi(url):

@@ -1,13 +1,15 @@
 """ sciexchangebot module start """
 from asyncio import TimeoutError
 from telethon import Button
-from telethon.errors.rpcerrorlist import UserIsBlockedError
 from telethon.utils import pack_bot_file_id
 from sciexchangebot import config, logger
 from .get_recent_10_unhelped import get_recent_unhelped_url
 from ..listener import listener, process_link
-from ..database import is_in_blacklist, log_select_fr_msg_id, log_update_fr_msg_id
+from ..database import is_in_blacklist, select, update
 
+CHANNEL_ID = int(config['telegram']['channel_id'])
+CHANNEL_NAME = config['telegram']['channel_name']
+DOCUMENT_GROUP_ID = int(config['telegram']['document_group_id'])
 
 @listener(outgoing=True, incoming=True, command="start")
 async def start(context):
@@ -37,18 +39,17 @@ async def start(context):
             await conv.send_message('请发送您要传输的文件\nPlease send your files')
             try:
                 response = await conv.get_response(timeout=600)
-                user_id = log_select_fr_msg_id('user_id', msg_id)
+                user_id = select('user_id', 'msg_id', msg_id)
                 if response.document:
                     file_id = pack_bot_file_id(response.document)
                     document = await context.client.send_file(
-                        int(config['telegram']['documentgroup']),
-                        caption=f'[{msg_id}](https://t.me/{config["telegram"]["workgroupname"]}/{msg_id})',
+                        DOCUMENT_GROUP_ID,
+                        caption=f'[{msg_id}](https://t.me/{CHANNEL_NAME}/{msg_id})',
                         file=file_id)
                     document_id = document.id
-                    # await response.forward_to(user_id)
                     await context.client.send_file(
                         user_id,
-                        caption=f'[{msg_id}](https://t.me/{config["telegram"]["workgroupname"]}/{msg_id})',
+                        caption=f'[{msg_id}](https://t.me/{CHANNEL_NAME}/{msg_id})',
                         file=file_id)
                     logger.info(f'[FILE] [CHECK] USER_ID:MSG_ID:DOCUMENT_ID =  {user_id}:{msg_id}:{document_id}')
 
@@ -59,7 +60,7 @@ async def start(context):
                         buttons=[Button.inline('是的Yes', b'YES'), Button.inline('不是No', b'NO')])
                     
                     bot_msg_id = bot_msg.id
-                    if not (log_update_fr_msg_id('document_id', document_id, msg_id) and log_update_fr_msg_id('bot_msg_id', bot_msg_id, msg_id)):
+                    if not (update('document_id', document_id, 'msg_id', msg_id) and update('bot_msg_id', bot_msg_id, 'msg_id', msg_id)):
                         logger.error(f'[DATABASE] [LOG_UPDATE_FR_MSG_ID] ("document_id", {document_id}, {msg_id})')
                         await response.reply('数据库错误,请联系 @Pentacene')
 
@@ -70,7 +71,7 @@ async def start(context):
                     logger.info(f'[FILE] [SUCCESS] USER_ID:MSG_ID:DOCUMENT_ID = {user_id}:{msg_id}:{document_id}')
 
                     await context.client.edit_message(
-                        int(config['telegram']['workgroup']),
+                        CHANNEL_ID,
                         msg_id,
                         link_preview=False,
                         buttons=[
@@ -79,7 +80,10 @@ async def start(context):
                                 b'UnderReview'),
                             Button.url(
                                 '点我查看Click2View',
-                                process_link(int(config['telegram']['documentgroup']), document_id))])
+                                process_link(DOCUMENT_GROUP_ID, document_id))])
+                    if not update('b_status', 2, 'msg_id', msg_id):
+                        logger.error(f'[DATABASE] [LOG_UPDATE_B_STATUS] ({document_id}, {msg_id})')
+                        await response.reply('数据库错误,请联系 @Pentacene')
                 else:
                     await response.reply(
                         ('您发送的好像不是一个文件,请您重新点击按钮发送~\n'

@@ -1,16 +1,18 @@
 api_hash: 
 api_key: ''
 database:
-  from_port: 
+  database: 
   password: 
-  server_host: 
-  username: 
+  host: 
+  user: 
 disabled_cmd: ''
 telegram:
   TOKEN: 
-  admingroup: ''
+  admin_group: ''
   uid: ''
-  workgroup: ''
-  workgroupname: ''
-  documentgroup: ''
+  channel_id: ''
+  channel_name: ''
+  document_group_id: ''
   name: ''
+check_group_id:
+  - 1012414645

@@ -3,55 +3,58 @@ import re
 from telethon import events, Button
 from telethon.errors.rpcerrorlist import UserIsBlockedError
 from sciexchangebot import bot, config, logger
-from ..database import is_in_blacklist, log_select_fr_msg_id, log_update_fr_bot_msg_id, log_select_fr_bot_msg_id, add_blacklist
+from ..database import is_in_blacklist, select, update, add_blacklist
 from ..listener import process_link
 from .get_recent_10_unhelped import get_recent_unhelped_url
 
-checkgroupid = [1012414645, 755291447]
+CHECK_GROUP_ID = config['check_group_id']
 
 @bot.on(events.CallbackQuery)
 async def handler(event):
-    try:
-        chat_id = int(event.original_update.peer.user_id) * (-1) - 1000000000000
-    except:
-        chat_id = int(event.original_update.peer.channel_id) * (-1) - 1000000000000
     msg_id = event.original_update.msg_id
     user_id = event.original_update.user_id
+    # if user in blacklist
     if is_in_blacklist(user_id):
         await event.answer(
             (f'你因为 {is_in_blacklist(user_id)} 被禁止使用此服务。详情请联系 @Pentacene\n'
              f'You have been banned from this service. Please contact @Pentacene for more details.'))
         return
+    # if 😭未找到notFound has been clicked
     if event.data == b'notFound':
-        if user_id == 1012414645:
-            await it_is_ad(event, log_select_fr_msg_id('user_id', msg_id))
+        # by check group, AD
+        if user_id in CHECK_GROUP_ID:
+            await it_is_ad(event, select('user_id', 'msg_id', msg_id))
             logger.info(f'[DELETE] UID:MID:EVENT = {user_id}:{msg_id}:{event.original_update}')
         else:
             await event.answer('你能来帮帮他么?')
+    # if 🤔审核中Checking has been clicked
     elif event.data == b'UnderReview':
-        if user_id in checkgroupid:
+        # by check group, review by check group
+        if user_id in CHECK_GROUP_ID:
             event.answer('管理员审核~')
             await review_request(event, msg_id)
-            # await change_status(event, msg_id, log_select_fr_msg_id('document_id', msg_id))
             logger.info(f'[REVIEW] {msg_id} by {user_id}')
+    # if 😊已找到Found has been clicked
     elif event.data == b'Found':
         if user_id == 1012414645:
-            event.answer(log_select_fr_msg_id('user_id', msg_id))
+            event.answer(select('user_id', 'msg_id', msg_id))
+    # if Yes has been clicked
     elif event.data == b'YES':
         bot_msg_id = msg_id
-        msg_id = log_select_fr_bot_msg_id('msg_id', bot_msg_id)
-        document_id = log_select_fr_bot_msg_id('document_id', bot_msg_id)
+        msg_id = select('msg_id', 'bot_msg_id', bot_msg_id)
+        document_id = select('document_id', 'bot_msg_id', bot_msg_id)
         await event.answer('恭喜你找到了自己想要的文献!')
         await event.edit(
             f'恭喜你找到了自己想要的文献!\nCongratulations!\n\n{get_recent_unhelped_url()}',
             buttons=Button.url(
                 '半永久保存地址',
                 process_link(int(config['telegram']['documentgroup']), document_id)))
-        if not log_update_fr_bot_msg_id('b_status', 1, bot_msg_id):
+        if not update('b_status', 1, 'bot_msg_id', bot_msg_id):
             await event.answer('数据库出错，无法更新！')
             logger.error(f'[DATABASE] [LOG_UPDATE_FR_BOT_MSG_ID] ("b_status", 1, {bot_msg_id})')
         await change_status(event, msg_id, document_id)
         logger.info(f'[CHECK] [CURRECT] USER_ID:MSG_ID:DOCUMENT_ID = {user_id}:{msg_id}:{document_id}')
+    # if No has been clicked
     elif event.data == b'NO':
         bot_msg_id = msg_id
         await event.answer('那我们再等等看吧')
@@ -59,7 +62,7 @@ async def handler(event):
             f'您要找的文献已经有人回复啦!可惜不是你想要的.\n'
             f'Unfortunately, someone send the papers which not your request.\n\n'
             f'{get_recent_unhelped_url()}'))
-        if not log_update_fr_bot_msg_id('document_id', 0, bot_msg_id):
+        if not update('document_id', 0, 'bot_msg_id', bot_msg_id):
             await event.answer('数据库出错，无法删除！')
             logger.error(f'[DATABASE] [LOG_UPDATE_FR_BOT_MSG_ID] ("document_id", 0, {bot_msg_id})')
         logger.info(f'[CHECK] [INCURRECT] USER_ID = {user_id}')
@@ -79,8 +82,8 @@ async def handler(event):
         await review(event, msg_id, is_accept=False)
         logger.info(f'[REVIEW] [REJECT] {msg_id} by {user_id}')
     elif event.data == b'banYes':
-        if user_id in checkgroupid:
-            ban_id = log_select_fr_msg_id('user_id', msg_id)
+        if user_id in CHECK_GROUP_ID:
+            ban_id = select('user_id', 'msg_id', msg_id)
             await event.client.edit_permissions(int(config['telegram']['workgroup']), ban_id, view_messages=False)
             await event.client.edit_permissions(int(config['telegram']['documentgroup']), ban_id, view_messages=False)
             add_blacklist(ban_id, '发完需求就直接停止使用了机器人')
@@ -130,13 +133,13 @@ async def review_request(event, msg_id: int) -> None:
     logger.info(f'[REVIEW] [SEND_REQUEST] {admin_id}')
 
 async def review(event, msg_id: int, is_accept: bool) -> None:
-    user_id = log_select_fr_msg_id('user_id', msg_id)
-    bot_msg_id = log_select_fr_msg_id('bot_msg_id', msg_id)
+    user_id = select('user_id', 'msg_id', msg_id)
+    bot_msg_id = select('bot_msg_id', 'msg_id', msg_id)
     if is_accept:
-        if not log_update_fr_bot_msg_id('b_status', 1, bot_msg_id):
+        if not update('b_status', 1, 'bot_msg_id', bot_msg_id):
             await event.answer('数据库出错，无法更新！')
             logger.error(f'[DATABASE] [LOG_UPDATE_FR_BOT_MSG_ID] ("b_status", 1, {bot_msg_id})')
-        document_id = log_select_fr_msg_id('document_id', msg_id)
+        document_id = select('document_id', 'msg_id', msg_id)
         try:
             await event.client.edit_message(
                 user_id,
@@ -151,9 +154,9 @@ async def review(event, msg_id: int, is_accept: bool) -> None:
                 f'[这个傻逼](tg://user?id={user_id}) 发完需求就直接停止使用了机器人. 是否封禁?',
                 buttons=[Button.inline('封了他!封了他!', b'banYES'), Button.inline('算了吧', b'banNo')]
             )
-        await change_status(event, msg_id, log_select_fr_msg_id('document_id', msg_id))
+        await change_status(event, msg_id, select('document_id', 'msg_id', msg_id))
     else:
-        if not log_update_fr_bot_msg_id('b_status', 0, bot_msg_id):
+        if not update('b_status', 0, 'bot_msg_id', bot_msg_id):
             await event.answer('数据库出错，无法更新！')
             logger.error(f'[DATABASE] [LOG_UPDATE_FR_BOT_MSG_ID] ("b_status", 0, {bot_msg_id})')
         try:

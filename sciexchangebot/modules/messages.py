@@ -3,9 +3,14 @@ from telethon import Button
 from telethon.tl.functions.channels import LeaveChannelRequest
 from sciexchangebot import config, logger
 from ..listener import listener, process_link
-from ..database import log, log_select_fr_msg_id, is_in_blacklist, log_select_fr_doi
+from ..database import log, select, is_in_blacklist
 from .doi_resolver import resolve_doi, is_doi
 
+CHANNEL_ID = int(config['telegram']['channel_id'])
+CHANNEL_NAME = config['telegram']['channel_name']
+DOCUMENT_GROUP_ID = int(config['telegram']['document_group_id'])
+ADMIN_GROUP_ID = int(config['telegram']['admin_group'])
+BOT_NAME = config['telegram']['name']
 
 def is_legal_url(msg: str) -> bool:
     if msg.startswith("https://"):
@@ -20,19 +25,19 @@ def is_legal_url(msg: str) -> bool:
 async def request2channel(context, url: str, is_doi: bool = True) -> None:
     if is_doi:
         msg = await context.client.send_message(
-            int(config['telegram']['workgroup']),
+            DOCUMENT_GROUP_ID,
             f'https://doi.org/{url}',
             link_preview=False)
     else:
         msg = await context.client.send_message(
-            int(config['telegram']['workgroup']),
+            DOCUMENT_GROUP_ID,
             context.text,
             link_preview=False)
     await msg.edit(
         link_preview=False,
         buttons=[
             Button.inline(f'😭未找到notFound', b'notFound'),
-            Button.url('如果您有请点我iHaveThis', f"https://t.me/{config['telegram']['name']}?start={msg.id}")])
+            Button.url('如果您有请点我iHaveThis', f"https://t.me/{BOT_NAME}?start={msg.id}")])
     if not log(msg.chat_id, msg.id, context.sender.id, str(url)):
         logger.error(f'[DATABASE] [LOG] {msg.chat_id}, {msg.id}, {context.sender.id}, {str(url)}')
     await context.reply(
@@ -41,34 +46,34 @@ async def request2channel(context, url: str, is_doi: bool = True) -> None:
          f'由于 [Sci-hub已经恢复上传新论文](https://t.me/SCIExchange/234) '
          f'您可以试试将论文请求发送给 @scihubot 或尝试使用官方网站 https://sci-hub.se/{url} 查找这篇论文\n'
          f'You may send requests to @scihubot or check https://sci-hub.se/{url} for your requests since SCI-HUB back to work.'),
-        buttons=[Button.url('您的发布信息UrPost', f'https://t.me/{config["telegram"]["workgroupname"]}/{msg.id}')])
+        buttons=[Button.url('您的发布信息UrPost', f'https://t.me/{CHANNEL_NAME}/{msg.id}')])
     logger.info(f'[SENDREQUEST] USER_ID:MSG = {context.sender.id}:{context.text}')
     return
 
 async def request_already_exist(context, msg_id: int) -> None:
-    document_id = log_select_fr_msg_id('document_id', msg_id)
+    document_id = select('document_id', 'msg_id', msg_id)
     text = '你要找的这篇内容已经有人问过啦~\nYour requests is already in database.\n'
-    b_status = log_select_fr_msg_id('b_status', msg_id)
+    b_status = select('b_status', 'msg_id', msg_id)
     logger.info(f'[ALREADYASKED] USER_ID:DOCUMENT_ID:B_STATUS = {context.sender.id}:{document_id}:{b_status}')
     if b_status == 0:
         await context.reply(
             f'{text}可惜没有人回答哦. 你能帮帮忙嘛?\nBut nobody sent files.',
-            buttons=[Button.url('如果您有请点我iHaveThis', f"https://t.me/{config['telegram']['name']}?start={msg_id}")])
+            buttons=[Button.url('如果您有请点我iHaveThis', f"https://t.me/{BOT_NAME}?start={msg_id}")])
         logger.info(f'[ALREADYASKED] [NODOC] USER_ID:DOCUMENT_ID:B_STATUS = {context.sender.id}:{document_id}:{b_status}')
     else:
         await context.reply(
             f'{text}在这里哦👇\nIs right here👇',
-            buttons=[Button.url('点我查看Click2View', process_link(int(config["telegram"]["documentgroup"]), document_id))])
+            buttons=[Button.url('点我查看Click2View', process_link(DOCUMENT_GROUP_ID, document_id))])
         logger.info(f'[ALREADYASKED] [SENT] USER_ID:DOCUMENT_ID:B_STATUS = {context.sender.id}:{document_id}:{b_status}')
 
 @listener(incoming=True)
 async def log_message(context):
     if context.chat_id < 0:
-        if context.chat_id == int(config['telegram']['admingroup']):
+        if context.chat_id == CHANNEL_ID:
             return
-        if context.chat_id == int(config['telegram']['workgroup']):
+        if context.chat_id == DOCUMENT_GROUP_ID:
             return
-        if context.chat_id == int(config['telegram']['documentgroup']):
+        if context.chat_id == ADMIN_GROUP_ID:
             return
         await context.client(LeaveChannelRequest(context.chat_id))
         logger.info(f'[LEAVE] ID {context.chat_id}')
@@ -89,7 +94,7 @@ async def log_message(context):
                 return
             if is_legal_url(context.text) or is_doi(context.text):
                 doi = await resolve_doi(context.text)
-                msg_id = log_select_fr_doi('msg_id', doi)
+                msg_id = select('msg_id', 'doi', doi)
                 if not msg_id:
                     if doi is None:
                         await request2channel(context, context.text, False)
@@ -100,7 +105,7 @@ async def log_message(context):
                     await request_already_exist(context, msg_id)
             elif is_doi(context.text):
                 doi = context.text
-                msg_id = log_select_fr_doi('msg_id', doi)
+                msg_id = select('msg_id', 'doi', doi)
                 if not msg_id:
                     await request2channel(context, doi)
                 else:
