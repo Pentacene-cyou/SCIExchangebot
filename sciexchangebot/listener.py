@@ -57,7 +57,7 @@ def listener(**args):
                             f"# Traceback: \n-----BEGIN TRACEBACK-----\n" \
                             f"{str(exc_format)}\n-----END TRACEBACK-----\n" \
                             f"# Error: \"{str(exc_info)}\". \n"
-                await send_log(report, int(config['telegram']['admingroup']))
+                await send_log(report, int(config['telegram']['admin_group']))
             
         if not ignore_edited:
             bot.add_event_handler(handler, events.MessageEdited(**args))

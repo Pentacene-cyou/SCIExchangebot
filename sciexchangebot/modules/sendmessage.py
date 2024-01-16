@@ -18,15 +18,12 @@ async def send_message(context):
         for user in user_list:
             await context.client.send_message(
                 int(user),
-                (f'**开发者回复**:\n{text}\n\n'
-                 f'有问题请加入 [这里](https://t.me/+4_KEIC6HLL02YjVh) 进行讨论.')
-            )
+                (f'**Response of developers:**:\n{text}\n\n'
+                 f' If you have any questions, please join the discussion [here](https://t.me/+4_KEIC6HLL02YjVh) .'))
             await sleep(1)
 
     await context.client.send_message(
         int(context.parameter[0]),
-        (f'**开发者回复**:\n{text}\n\n'
-         f'有问题请加入 [这里](https://t.me/+4_KEIC6HLL02YjVh) 进行讨论.')
-    )
-
+        (f'**Response of developers:**:\n{text}\n\n'
+         f' If you have any questions, please join the discussion [here](https://t.me/+4_KEIC6HLL02YjVh) .'))
     await context.reply('sent')

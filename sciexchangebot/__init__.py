@@ -40,5 +40,5 @@ async def log(message):
         message.replace('`', '\"').replace('\n', '    ')
     )
     await bot.send_message(
-        int(config['telegram']['admingroup']),
+        int(config['telegram']['admin_group']),
         f'sciexchangebot\nlog message\n{message}')    

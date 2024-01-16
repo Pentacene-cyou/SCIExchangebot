@@ -18,25 +18,21 @@ async def start(context):
         return
     if is_in_blacklist(context.sender.id):
         await context.reply(
-            (f'你因为 {is_in_blacklist(context.sender.id)} 被禁止使用此服务。详情请联系 @Pentacene\n'
-             f'You have been banned from this service. Please contact @Pentacene for more details.'))
+            ('I am sorry to hear that you have been banned from using this bot.\n' 
+             'Please reach out to @Pentacene for further communication and assistance.'))
         return
     if len(context.parameter) == 0:
         await context.reply(
-            ('您好, 请您先关注 @SCIExchange \n'
-             '请输入您想要求助的文章doi号或文章网址:\n\n'
-             '由于 [Sci-hub已经恢复上传新论文](https://t.me/SCIExchange/234) 您可以试试将论文请求发送给 @scihubot '
-             '或尝试使用官方网站 https://sci-hub.se/ 查找这篇论文\n\n'
-             'Please first subscribe @SCIExchange for next step.\n'
-             'Please send URL from publisher or DOI links.\n'
-             'You may send requests to @scihubot or check https://sci-hub.se/{url} '
-             'for your requests since SCI-HUB back to work.'))
+            ('Hello, please first follow @SCIExchange. \n'
+             'Enter the DOI number of the article you would like assistance with.\n\n'
+             "Due to Sci-hub's resumption of uploading new papers, you can try sending the paper request to @scihubot " 
+             'or attempt to use the official website https://sci-hub.se/ to find this paper.'))
         logger.info(f'[START] USER_ID: {context.sender.id}')
     else:
         msg_id = int(context.parameter[0])
         logger.info(f'[FILE] [INIT] USER_ID:MSG_ID =  {context.sender.id}:{context.parameter[0]}')
         async with context.client.conversation(context.chat_id) as conv:
-            await conv.send_message('请发送您要传输的文件\nPlease send your files')
+            await conv.send_message('Please send the file you wish to transfer.')
             try:
                 response = await conv.get_response(timeout=600)
                 user_id = select('user_id', 'msg_id', msg_id)
@@ -55,18 +51,16 @@ async def start(context):
 
                     bot_msg = await context.client.send_message(
                         user_id,
-                        ('您要找的文献已经有人回复啦! 请问是这个嘛?\n'
-                            'Someone reply your request. Is this the right one?'),
-                        buttons=[Button.inline('是的Yes', b'YES'), Button.inline('不是No', b'NO')])
+                        'The literature you were looking for has received a response! Is this the one you were referring to?',
+                        buttons=[Button.inline('Yes', b'YES'), Button.inline('No', b'NO')])
                     
                     bot_msg_id = bot_msg.id
                     if not (update('document_id', document_id, 'msg_id', msg_id) and update('bot_msg_id', bot_msg_id, 'msg_id', msg_id)):
                         logger.error(f'[DATABASE] [LOG_UPDATE_FR_MSG_ID] ("document_id", {document_id}, {msg_id})')
-                        await response.reply('数据库错误,请联系 @Pentacene')
+                        await response.reply('DATABASE ERROR! PLEASE reach out to @Pentacene')
 
                     await response.reply((
-                        f'感谢您提供文件! 已经通知寻找者~\n'
-                        f'Thanks for the files. Already sent notification to requester.\n'
+                        f'Thank you for providing the document! The seeker has been notified.\n'
                         f'{get_recent_unhelped_url()}'))
                     logger.info(f'[FILE] [SUCCESS] USER_ID:MSG_ID:DOCUMENT_ID = {user_id}:{msg_id}:{document_id}')
 
@@ -76,21 +70,20 @@ async def start(context):
                         link_preview=False,
                         buttons=[
                             Button.inline(
-                                '🤔审核中Checking',
+                                '🤔UnderReview',
                                 b'UnderReview'),
                             Button.url(
-                                '点我查看Click2View',
+                                'Click2view',
                                 process_link(DOCUMENT_GROUP_ID, document_id))])
                     if not update('b_status', 2, 'msg_id', msg_id):
                         logger.error(f'[DATABASE] [LOG_UPDATE_B_STATUS] ({document_id}, {msg_id})')
-                        await response.reply('数据库错误,请联系 @Pentacene')
+                        await response.reply('DATABASE ERROR! PLEASE reach out to @Pentacene')
                 else:
                     await response.reply(
-                        ('您发送的好像不是一个文件,请您重新点击按钮发送~\n'
-                         'It seems like you did not sent a file. Please click send button on channel again.'))
+                        'It seems like what you sent is not a file. Please click the button again to resend.')
                     logger.info(f'[FILE] [NOTDOC] USER_ID:MSG_ID = {user_id}:{msg_id}')
             except TimeoutError:
                 await conv.send_message(
-                    ('您已超时,对话已关闭.如您需要发送文件请从原入口进入后再发送.\n'
-                     'Timeout due to the limit of Telegram. Please click send button on channel again.'))
+                    ('You have exceeded the time limit, and the conversation has been closed.'
+                     'If you need to send a file, please enter from the original entrance and send it again.'))
                 logger.info(f'[FILE] [TIMEOUT] USER:WID = {context.sender.id}:{context.parameter[0]}')

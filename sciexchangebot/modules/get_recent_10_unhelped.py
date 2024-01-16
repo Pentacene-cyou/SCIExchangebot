@@ -10,4 +10,4 @@ def get_recent_unhelped_url() -> str:
     pre_url = f'https://t.me/{CHANNEL_NAME}/'
     for i in range(0, 9):
         recent_ten_unhelped_url = (f'{recent_ten_unhelped_url}\n{pre_url}{all_unhelped_msg_id_list[i]}')
-    return f'也请您关注一下其他未被找到的文献们\nPlease check this list to help others.\n{recent_ten_unhelped_url}'
+    return f'Please also pay attention to the other literature that has not been found.\n{recent_ten_unhelped_url}'

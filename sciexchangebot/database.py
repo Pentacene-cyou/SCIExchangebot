@@ -57,8 +57,10 @@ def update(column: str, value: str|int, select_column: str, select_value: str|in
     db_cursor = database.cursor()
     if isinstance(value, str):
         db_cursor.execute(f'UPDATE doi_doc SET {column} = {value} where {select_column} = "{select_value}"')
+        database.commit()
     elif isinstance(value, int):
         db_cursor.execute(f'UPDATE doi_doc SET {column} = {value} where {select_column} = {select_value}')
+        database.commit()
     else:
         return False
     return True
